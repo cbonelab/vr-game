@@ -2,12 +2,12 @@
 <html>
 <head>
   <meta charset="utf-8">
-  <title>Gorilla Tag VR Physics</title>
+  <title>Gorilla Tag VR Quest 3</title>
   <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
   <script src="https://cdn.jsdelivr.net/gh/n5ro/aframe-physics-system@v4.0.1/dist/aframe-physics-system.min.js"></script>
 </head>
 <body>
-<a-scene physics="gravity: -9.8" vr-mode-ui="enabled: true">
+<a-scene physics="gravity: -9.8" vr-mode-ui="enabled: true" webxr="optionalFeatures: local-floor">
 
   <!-- Ground -->
   <a-plane rotation="-90 0 0" width="50" height="50" color="#4CAF50" static-body></a-plane>
@@ -16,9 +16,9 @@
   <a-entity id="player" position="0 1.6 0" dynamic-body>
     <a-camera id="camera"></a-camera>
 
-    <!-- Hands -->
-    <a-entity id="leftHand" oculus-touch-controls="hand: left" physics-hand></a-entity>
-    <a-entity id="rightHand" oculus-touch-controls="hand: right" physics-hand></a-entity>
+    <!-- Hands / Controllers -->
+    <a-entity id="leftHand" hand-controls="hand: left; handModelStyle: lowPoly; color: blue" physics-hand></a-entity>
+    <a-entity id="rightHand" hand-controls="hand: right; handModelStyle: lowPoly; color: red" physics-hand></a-entity>
   </a-entity>
 
   <!-- Climbable cubes -->
@@ -27,6 +27,7 @@
   <a-box position="0 2 -7" color="yellow" dynamic-body></a-box>
 
   <script>
+    // Physics-based hand movement
     AFRAME.registerComponent('physics-hand', {
       init: function () {
         this.prevPos = new THREE.Vector3();
@@ -35,19 +36,24 @@
       },
       tick: function (time, deltaTime) {
         const dt = deltaTime / 1000;
+
+        // Get hand world position
         const handPos = new THREE.Vector3();
         this.el.object3D.getWorldPosition(handPos);
 
-        // Velocity of hand
+        // Hand velocity
         const handVel = new THREE.Vector3().subVectors(handPos, this.prevPos).divideScalar(dt);
 
-        // Only horizontal forces for movement
-        const force = new THREE.Vector3(handVel.x, 0, handVel.z).multiplyScalar(1.5);
+        // Horizontal push
+        const horizontalForce = new THREE.Vector3(handVel.x, 0, handVel.z).multiplyScalar(2);
+        this.player.position.add(horizontalForce.multiplyScalar(dt));
 
-        // Apply force to player
-        this.player.position.add(force.multiplyScalar(dt));
+        // Upward boost when pushing down
+        if (handVel.y < -0.02) {
+          this.player.position.y += Math.abs(handVel.y) * 2;
+        }
 
-        // Simple gravity for player
+        // Gravity
         if (this.player.position.y > 1.6) {
           this.player.position.y -= 9.8 * dt;
           if (this.player.position.y < 1.6) this.player.position.y = 1.6;
@@ -60,4 +66,3 @@
 </a-scene>
 </body>
 </html>
-
